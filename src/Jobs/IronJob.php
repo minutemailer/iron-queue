@@ -2,11 +2,11 @@
 
 namespace Collective\IronQueue\Jobs;
 
-use Illuminate\Support\Arr;
-use Illuminate\Queue\Jobs\Job;
 use Collective\IronQueue\IronQueue;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Queue\Job as JobContract;
+use Illuminate\Queue\Jobs\Job;
+use Illuminate\Support\Arr;
 
 class IronJob extends Job implements JobContract
 {
@@ -34,10 +34,11 @@ class IronJob extends Job implements JobContract
     /**
      * Create a new job instance.
      *
-     * @param  \Illuminate\Container\Container  $container
-     * @param  \Collective\IronQueue\IronQueue  $iron
-     * @param  object  $job
-     * @param  bool    $pushed
+     * @param \Illuminate\Container\Container $container
+     * @param \Collective\IronQueue\IronQueue $iron
+     * @param object                          $job
+     * @param bool                            $pushed
+     *
      * @return void
      */
     public function __construct(Container $container,
@@ -84,20 +85,22 @@ class IronJob extends Job implements JobContract
             return;
         }
 
-        $this->iron->deleteMessage($this->getQueue(), $this->job->id);
+        $reservation_id = property_exists($this->job, 'reservation_id') ? $this->job->reservation_id : null;
+        $this->iron->deleteMessage($this->getQueue(), $this->job->id, $reservation_id);
     }
 
     /**
      * Release the job back into the queue.
      *
-     * @param  int   $delay
+     * @param int $delay
+     *
      * @return void
      */
     public function release($delay = 0)
     {
         parent::release($delay);
 
-        if (! $this->pushed) {
+        if (!$this->pushed) {
             $this->delete();
         }
 
@@ -107,7 +110,8 @@ class IronJob extends Job implements JobContract
     /**
      * Release a pushed job back onto the queue.
      *
-     * @param  int  $delay
+     * @param int $delay
+     *
      * @return void
      */
     protected function recreateJob($delay)
