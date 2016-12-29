@@ -30,21 +30,6 @@ class IronQueueTest extends PHPUnit_Framework_TestCase
         $queue->push('foo', [1, 2, 3]);
     }
 
-    public function testPushProperlyPushesJobOntoIronWithClosures()
-    {
-        $queue = new Collective\IronQueue\IronQueue($iron = m::mock('IronMQ\IronMQ'), m::mock('Illuminate\Http\Request'), 'default', true);
-        $crypt = m::mock('Illuminate\Contracts\Encryption\Encrypter');
-        $queue->setEncrypter($crypt);
-        $name = 'Foo';
-        $closure = (new Serializer())->serialize($innerClosure = function () use ($name) { return $name; });
-        $crypt->shouldReceive('encrypt')->once()->with($closure)->andReturn('serial_closure');
-        $crypt->shouldReceive('encrypt')->once()->with(json_encode([
-            'job' => 'IlluminateQueueClosure', 'data' => ['closure' => 'serial_closure'], 'attempts' => 1, 'queue' => 'default',
-        ]))->andReturn('encrypted');
-        $iron->shouldReceive('postMessage')->once()->with('default', 'encrypted', [])->andReturn((object) ['id' => 1]);
-        $queue->push($innerClosure);
-    }
-
     public function testDelayedPushProperlyPushesJobOntoIron()
     {
         $queue = new Collective\IronQueue\IronQueue($iron = m::mock('IronMQ\IronMQ'), m::mock('Illuminate\Http\Request'), 'default', true);
