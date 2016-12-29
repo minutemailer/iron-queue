@@ -64,7 +64,18 @@ class IronQueue extends Queue implements QueueContract
         $this->shouldEncrypt = $shouldEncrypt;
         $this->timeout = $timeout;
     }
-    
+
+    /**
+     * Get the size of the queue.
+     *
+     * @param string|null $queue
+     * @return int
+     */
+    public function size($queue = null)
+    {
+        return (int) $this->getIron()->getQueue($queue)->size;
+    }
+
     /**
      * Push a new job onto the queue.
      *
