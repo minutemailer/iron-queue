@@ -1,11 +1,10 @@
 {
-    "name": "laravelcollective/iron-queue",
+    "name": "hydreflab/iron-queue",
     "description": "IronMQ support for the Laravel queue.",
     "license": "MIT",
-    "homepage": "http://laravelcollective.com",
     "support": {
-        "issues": "https://github.com/laravelcollective/iron-queue/issues",
-        "source": "https://github.com/laravelcollective/iron-queue"
+        "issues": "https://github.com/hydreflab/iron-queue/issues",
+        "source": "https://github.com/hydreflab/iron-queue"
     },
     "authors": [
         {
