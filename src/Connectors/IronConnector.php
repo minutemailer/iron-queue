@@ -15,7 +15,7 @@ class IronConnector implements ConnectorInterface
      *
      * @var \Illuminate\Encryption\Encrypter
      */
-    protected $crypt;
+    protected $encrypter;
 
     /**
      * The current request instance.
@@ -27,14 +27,12 @@ class IronConnector implements ConnectorInterface
     /**
      * Create a new Iron connector instance.
      *
-     * @param \Illuminate\Contracts\Encryption\Encrypter $crypt
+     * @param \Illuminate\Contracts\Encryption\Encrypter $encrypter
      * @param \Illuminate\Http\Request                   $request
-     *
-     * @return void
      */
-    public function __construct(EncrypterContract $crypt, Request $request)
+    public function __construct(EncrypterContract $encrypter, Request $request)
     {
-        $this->crypt = $crypt;
+        $this->encrypter = $encrypter;
         $this->request = $request;
     }
 
@@ -43,7 +41,6 @@ class IronConnector implements ConnectorInterface
      *
      * @param array $config
      * @param array $config
-     *
      * @return \Illuminate\Contracts\Queue\Queue
      */
     public function connect(array $config)
@@ -61,7 +58,7 @@ class IronConnector implements ConnectorInterface
         }
 
         $queue = new IronQueue($iron, $this->request, $config['queue'], $config['encrypt'], $config['timeout']);
-        $queue->setEncrypter($this->crypt);
+        $queue->setEncrypter($this->encrypter);
 
         return $queue;
     }
