@@ -3,6 +3,7 @@
 namespace Collective\IronQueue;
 
 use Collective\IronQueue\Jobs\IronJob;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -65,12 +66,22 @@ class IronQueue extends Queue implements QueueContract
     }
 
     /**
+     * Get the size of the queue.
+     *
+     * @param string|null $queue
+     * @return int
+     */
+    public function size($queue = null)
+    {
+        return (int) $this->getIron()->getQueue($queue)->size;
+    }
+
+    /**
      * Push a new job onto the queue.
      *
      * @param string $job
      * @param mixed  $data
      * @param string $queue
-     *
      * @return mixed
      */
     public function push($job, $data = '', $queue = null)
@@ -84,7 +95,6 @@ class IronQueue extends Queue implements QueueContract
      * @param string $payload
      * @param string $queue
      * @param array  $options
-     *
      * @return mixed
      */
     public function pushRaw($payload, $queue = null, array $options = [])
@@ -102,7 +112,6 @@ class IronQueue extends Queue implements QueueContract
      * @param string $payload
      * @param string $queue
      * @param int    $delay
-     *
      * @return mixed
      */
     public function recreate($payload, $queue, $delay)
@@ -119,7 +128,6 @@ class IronQueue extends Queue implements QueueContract
      * @param string        $job
      * @param mixed         $data
      * @param string        $queue
-     *
      * @return mixed
      */
     public function later($delay, $job, $data = '', $queue = null)
@@ -135,7 +143,6 @@ class IronQueue extends Queue implements QueueContract
      * Pop the next job off of the queue.
      *
      * @param string $queue
-     *
      * @return \Illuminate\Contracts\Queue\Job|null
      */
     public function pop($queue = null)
@@ -160,7 +167,6 @@ class IronQueue extends Queue implements QueueContract
      * @param string $queue
      * @param string $id
      * @param string $reservation_id
-     *
      * @return void
      */
     public function deleteMessage($queue, $id, $reservation_id)
@@ -202,8 +208,7 @@ class IronQueue extends Queue implements QueueContract
      * Create a new IronJob for a pushed job.
      *
      * @param object $job
-     *
-     * @return \Illuminate\Queue\Jobs\IronJob
+     * @return \Collective\IronQueue\Jobs\IronJob
      */
     protected function createPushedIronJob($job)
     {
@@ -216,7 +221,6 @@ class IronQueue extends Queue implements QueueContract
      * @param string $job
      * @param mixed  $data
      * @param string $queue
-     *
      * @return string
      */
     protected function createPayload($job, $data = '', $queue = null)
@@ -230,7 +234,6 @@ class IronQueue extends Queue implements QueueContract
      * Parse the job body for firing.
      *
      * @param string $body
-     *
      * @return string
      */
     protected function parseJobBody($body)
@@ -242,7 +245,6 @@ class IronQueue extends Queue implements QueueContract
      * Get the queue or return the default.
      *
      * @param string|null $queue
-     *
      * @return string
      */
     public function getQueue($queue)
@@ -274,11 +276,36 @@ class IronQueue extends Queue implements QueueContract
      * Set the request instance.
      *
      * @param \Illuminate\Http\Request $request
-     *
      * @return void
      */
     public function setRequest(Request $request)
     {
         $this->request = $request;
+    }
+
+    /**
+     * Get the encrypter implementation.
+     *
+     * @return \Illuminate\Contracts\Encryption\Encrypter
+     * @throws \Exception
+     */
+    protected function getEncrypter()
+    {
+        if (is_null($this->encrypter)) {
+            throw new \Exception('No encrypter has been set on the Queue.');
+        }
+
+        return $this->encrypter;
+    }
+
+    /**
+     * Set the encrypter implementation.
+     *
+     * @param \Illuminate\Contracts\Encryption\Encrypter $encrypter
+     * @return void
+     */
+    public function setEncrypter(Encrypter $encrypter)
+    {
+        $this->encrypter = $encrypter;
     }
 }
