@@ -15,7 +15,7 @@ class IronQueueTest extends PHPUnit_Framework_TestCase
         $queue = new Collective\IronQueue\IronQueue($iron = m::mock('IronMQ\IronMQ'), m::mock('Illuminate\Http\Request'), 'default', true);
         $crypt = m::mock('Illuminate\Contracts\Encryption\Encrypter');
         $queue->setEncrypter($crypt);
-        $crypt->shouldReceive('encrypt')->once()->with(json_encode(['job' => 'foo', 'data' => [1, 2, 3], 'attempts' => 1, 'queue' => 'default']))->andReturn('encrypted');
+        $crypt->shouldReceive('encrypt')->once()->with(json_encode(['job' => 'foo', 'data' => [1, 2, 3]]))->andReturn('encrypted');
         $iron->shouldReceive('postMessage')->once()->with('default', 'encrypted', [])->andReturn((object) ['id' => 1]);
         $queue->push('foo', [1, 2, 3]);
     }
@@ -26,7 +26,7 @@ class IronQueueTest extends PHPUnit_Framework_TestCase
         $crypt = m::mock('Illuminate\Contracts\Encryption\Encrypter');
         $queue->setEncrypter($crypt);
         $crypt->shouldReceive('encrypt')->never();
-        $iron->shouldReceive('postMessage')->once()->with('default', json_encode(['job' => 'foo', 'data' => [1, 2, 3], 'attempts' => 1, 'queue' => 'default']), [])->andReturn((object) ['id' => 1]);
+        $iron->shouldReceive('postMessage')->once()->with('default', json_encode(['job' => 'foo', 'data' => [1, 2, 3]]), [])->andReturn((object) ['id' => 1]);
         $queue->push('foo', [1, 2, 3]);
     }
 
@@ -36,7 +36,7 @@ class IronQueueTest extends PHPUnit_Framework_TestCase
         $crypt = m::mock('Illuminate\Contracts\Encryption\Encrypter');
         $queue->setEncrypter($crypt);
         $crypt->shouldReceive('encrypt')->once()->with(json_encode([
-            'job' => 'foo', 'data' => [1, 2, 3], 'attempts' => 1, 'queue' => 'default',
+            'job' => 'foo', 'data' => [1, 2, 3]
         ]))->andReturn('encrypted');
         $iron->shouldReceive('postMessage')->once()->with('default', 'encrypted', ['delay' => 5])->andReturn((object) ['id' => 1]);
         $queue->later(5, 'foo', [1, 2, 3]);
@@ -48,8 +48,7 @@ class IronQueueTest extends PHPUnit_Framework_TestCase
         $queue = $this->getMock('Collective\IronQueue\IronQueue', ['getTime'], [$iron = m::mock('IronMQ\IronMQ'), m::mock('Illuminate\Http\Request'), 'default', true]);
         $crypt = m::mock('Illuminate\Contracts\Encryption\Encrypter');
         $queue->setEncrypter($crypt);
-        $queue->expects($this->once())->method('getTime')->will($this->returnValue($now->getTimestamp()));
-        $crypt->shouldReceive('encrypt')->once()->with(json_encode(['job' => 'foo', 'data' => [1, 2, 3], 'attempts' => 1, 'queue' => 'default']))->andReturn('encrypted');
+        $crypt->shouldReceive('encrypt')->once()->with(json_encode(['job' => 'foo', 'data' => [1, 2, 3]]))->andReturn('encrypted');
         $iron->shouldReceive('postMessage')->once()->with('default', 'encrypted', ['delay' => 5])->andReturn((object) ['id' => 1]);
         $queue->later($now->addSeconds(5), 'foo', [1, 2, 3]);
     }

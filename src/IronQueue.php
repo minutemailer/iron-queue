@@ -116,7 +116,8 @@ class IronQueue extends Queue implements QueueContract
      */
     public function recreate($payload, $queue, $delay)
     {
-        $options = ['delay' => $this->getSeconds($delay)];
+
+        $options = ['delay' => $this->secondsUntil($delay)];
 
         return $this->pushRaw($payload, $queue, $options);
     }
@@ -132,7 +133,7 @@ class IronQueue extends Queue implements QueueContract
      */
     public function later($delay, $job, $data = '', $queue = null)
     {
-        $delay = $this->getSeconds($delay);
+        $delay = $this->secondsUntil($delay);
 
         $payload = $this->createPayload($job, $data, $queue);
 
