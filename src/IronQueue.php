@@ -116,7 +116,8 @@ class IronQueue extends Queue implements QueueContract
      */
     public function recreate($payload, $queue, $delay)
     {
-        $options = ['delay' => $this->getSeconds($delay)];
+
+        $options = ['delay' => $this->secondsUntil($delay)];
 
         return $this->pushRaw($payload, $queue, $options);
     }
@@ -132,7 +133,7 @@ class IronQueue extends Queue implements QueueContract
      */
     public function later($delay, $job, $data = '', $queue = null)
     {
-        $delay = $this->getSeconds($delay);
+        $delay = $this->secondsUntil($delay);
 
         $payload = $this->createPayload($job, $data, $queue);
 
@@ -215,20 +216,6 @@ class IronQueue extends Queue implements QueueContract
         return new IronJob($this->container, $this, $job, true);
     }
 
-    /**
-     * Create a payload string from the given job and data.
-     *
-     * @param string $job
-     * @param mixed  $data
-     * @param string $queue
-     * @return string
-     */
-    protected function createPayload($job, $data = '', $queue = null)
-    {
-        $payload = $this->setMeta(parent::createPayload($job, $data), 'attempts', 1);
-
-        return $this->setMeta($payload, 'queue', $this->getQueue($queue));
-    }
 
     /**
      * Parse the job body for firing.
