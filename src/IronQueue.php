@@ -116,7 +116,6 @@ class IronQueue extends Queue implements QueueContract
      */
     public function recreate($payload, $queue, $delay)
     {
-
         $options = ['delay' => $this->secondsUntil($delay)];
 
         return $this->pushRaw($payload, $queue, $options);
@@ -196,12 +195,12 @@ class IronQueue extends Queue implements QueueContract
      */
     protected function marshalPushedJob()
     {
-        $r = $this->request;
-
-        $body = $this->parseJobBody($r->getContent());
+        $body = $this->parseJobBody($this->getRequest()->getContent());
 
         return (object) [
-            'id' => $r->header('iron-message-id'), 'body' => $body, 'pushed' => true,
+            'id' => $this->getRequest()->header('iron-message-id'),
+            'body' => $body,
+            'pushed' => true,
         ];
     }
 
