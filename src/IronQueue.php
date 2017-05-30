@@ -215,6 +215,20 @@ class IronQueue extends Queue implements QueueContract
         return new IronJob($this->container, $this, $job, true);
     }
 
+    /**
+     * Create a payload array from the given job and data.
+     *
+     * @param  string  $job
+     * @param  mixed   $data
+     * @param  string  $queue
+     * @return array
+     */
+    protected function createPayloadArray($job, $data = '', $queue = null)
+    {
+        return array_merge(parent::createPayloadArray($job, $data, $queue), [
+            'queue' => $this->getQueue($queue),
+        ]);
+    }
 
     /**
      * Parse the job body for firing.
