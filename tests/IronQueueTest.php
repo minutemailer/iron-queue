@@ -66,12 +66,10 @@ class IronQueueTest extends PHPUnit_Framework_TestCase
 
     public function testDelayedPushProperlyPushesJobOntoIronWithTimestamp()
     {
-        $now = Carbon\Carbon::now();
-
         $iron = m::mock('IronMQ\IronMQ');
         $iron->shouldReceive('postMessage')
             ->once()
-            ->with('default', 'encrypted', ['delay' => 5])
+            ->with('default', 'encrypted', ['delay' => 5,])
             ->andReturn((object) ['id' => 1]);
 
         $crypt = m::mock('Illuminate\Contracts\Encryption\Encrypter');
@@ -80,9 +78,9 @@ class IronQueueTest extends PHPUnit_Framework_TestCase
             ->with(json_encode(['displayName' => 'foo', 'job' => 'foo', 'maxTries' => null, 'timeout' => null, 'data' => [1, 2, 3], 'queue' => 'default']))
             ->andReturn('encrypted');
 
-        $queue = $this->getMock('Collective\IronQueue\IronQueue', ['getTime'], [$iron, m::mock('Illuminate\Http\Request'), 'default', true]);
+        $queue = new Collective\IronQueue\IronQueue($iron, m::mock('Illuminate\Http\Request'), 'default', true);
         $queue->setEncrypter($crypt);
-        $queue->later($now->addSeconds(5), 'foo', [1, 2, 3]);
+        $queue->later(5, 'foo', [1, 2, 3]);
     }
 
     public function testPopProperlyPopsJobOffOfIron()
