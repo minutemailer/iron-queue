@@ -1,10 +1,10 @@
 {
-    "name": "hydreflab/iron-queue",
+    "name": "minutemailer/iron-queue",
     "description": "IronMQ support for the Laravel queue.",
     "license": "MIT",
     "support": {
-        "issues": "https://github.com/hydreflab/iron-queue/issues",
-        "source": "https://github.com/hydreflab/iron-queue"
+        "issues": "https://github.com/minutemailer/iron-queue/issues",
+        "source": "https://github.com/minutemailer/iron-queue"
     },
     "authors": [
         {
