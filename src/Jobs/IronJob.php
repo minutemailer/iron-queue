@@ -38,28 +38,13 @@ class IronJob extends Job implements JobContract
      * @param \Collective\IronQueue\IronQueue $iron
      * @param object                          $job
      * @param bool                            $pushed
-     *
-     * @return void
      */
-    public function __construct(Container $container,
-                                IronQueue $iron,
-                                $job,
-                                $pushed = false)
+    public function __construct(Container $container, IronQueue $iron, $job, $pushed = false)
     {
         $this->job = $job;
         $this->iron = $iron;
         $this->pushed = $pushed;
         $this->container = $container;
-    }
-
-    /**
-     * Fire the job.
-     *
-     * @return void
-     */
-    public function fire()
-    {
-        $this->resolveAndFire(json_decode($this->getRawBody(), true));
     }
 
     /**
@@ -85,15 +70,13 @@ class IronJob extends Job implements JobContract
             return;
         }
 
-        $reservation_id = property_exists($this->job, 'reservation_id') ? $this->job->reservation_id : null;
-        $this->iron->deleteMessage($this->getQueue(), $this->job->id, $reservation_id);
+        $this->iron->deleteMessage($this->getQueue(), $this->job->id, $this->job->reservation_id);
     }
 
     /**
      * Release the job back into the queue.
      *
      * @param int $delay
-     *
      * @return void
      */
     public function release($delay = 0)
@@ -144,16 +127,6 @@ class IronJob extends Job implements JobContract
     }
 
     /**
-     * Get the IoC container instance.
-     *
-     * @return \Illuminate\Container\Container
-     */
-    public function getContainer()
-    {
-        return $this->container;
-    }
-
-    /**
      * Get the underlying Iron queue instance.
      *
      * @return \Collective\IronQueue\IronQueue
@@ -166,7 +139,7 @@ class IronJob extends Job implements JobContract
     /**
      * Get the underlying IronMQ job.
      *
-     * @return array
+     * @return mixed
      */
     public function getIronJob()
     {

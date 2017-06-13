@@ -3,6 +3,7 @@
 namespace Collective\IronQueue;
 
 use Collective\IronQueue\Jobs\IronJob;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -40,21 +41,39 @@ class IronQueue extends Queue implements QueueContract
     protected $shouldEncrypt;
 
     /**
+     * Number of seconds before the reservation_id times out on a newly popped message.
+     *
+     * @var int
+     */
+    protected $timeout;
+
+    /**
      * Create a new IronMQ queue instance.
      *
      * @param \IronMQ\IronMQ           $iron
      * @param \Illuminate\Http\Request $request
      * @param string                   $default
      * @param bool                     $shouldEncrypt
-     *
-     * @return void
+     * @param int                      $timeout
      */
-    public function __construct(IronMQ $iron, Request $request, $default, $shouldEncrypt = false)
+    public function __construct(IronMQ $iron, Request $request, $default, $shouldEncrypt = false, $timeout = 60)
     {
         $this->iron = $iron;
         $this->request = $request;
         $this->default = $default;
         $this->shouldEncrypt = $shouldEncrypt;
+        $this->timeout = $timeout;
+    }
+
+    /**
+     * Get the size of the queue.
+     *
+     * @param string|null $queue
+     * @return int
+     */
+    public function size($queue = null)
+    {
+        return (int) $this->getIron()->getQueue($queue)->size;
     }
 
     /**
@@ -63,7 +82,6 @@ class IronQueue extends Queue implements QueueContract
      * @param string $job
      * @param mixed  $data
      * @param string $queue
-     *
      * @return mixed
      */
     public function push($job, $data = '', $queue = null)
@@ -77,13 +95,12 @@ class IronQueue extends Queue implements QueueContract
      * @param string $payload
      * @param string $queue
      * @param array  $options
-     *
      * @return mixed
      */
     public function pushRaw($payload, $queue = null, array $options = [])
     {
         if ($this->shouldEncrypt) {
-            $payload = $this->crypt->encrypt($payload);
+            $payload = $this->getEncrypter()->encrypt($payload);
         }
 
         return $this->iron->postMessage($this->getQueue($queue), $payload, $options)->id;
@@ -95,12 +112,11 @@ class IronQueue extends Queue implements QueueContract
      * @param string $payload
      * @param string $queue
      * @param int    $delay
-     *
      * @return mixed
      */
-    public function recreate($payload, $queue = null, $delay)
+    public function recreate($payload, $queue, $delay)
     {
-        $options = ['delay' => $this->getSeconds($delay)];
+        $options = ['delay' => $this->secondsUntil($delay)];
 
         return $this->pushRaw($payload, $queue, $options);
     }
@@ -112,12 +128,11 @@ class IronQueue extends Queue implements QueueContract
      * @param string        $job
      * @param mixed         $data
      * @param string        $queue
-     *
      * @return mixed
      */
     public function later($delay, $job, $data = '', $queue = null)
     {
-        $delay = $this->getSeconds($delay);
+        $delay = $this->secondsUntil($delay);
 
         $payload = $this->createPayload($job, $data, $queue);
 
@@ -128,14 +143,13 @@ class IronQueue extends Queue implements QueueContract
      * Pop the next job off of the queue.
      *
      * @param string $queue
-     *
      * @return \Illuminate\Contracts\Queue\Job|null
      */
     public function pop($queue = null)
     {
         $queue = $this->getQueue($queue);
 
-        $job = $this->iron->getMessage($queue);
+        $job = $this->iron->reserveMessage($queue, $this->timeout);
 
         // If we were able to pop a message off of the queue, we will need to decrypt
         // the message body, as all Iron.io messages are encrypted, since the push
@@ -152,16 +166,12 @@ class IronQueue extends Queue implements QueueContract
      *
      * @param string $queue
      * @param string $id
-     *
+     * @param string $reservation_id
      * @return void
      */
-    public function deleteMessage($queue, $id, $reservation_id = null)
+    public function deleteMessage($queue, $id, $reservation_id)
     {
-        if ($reservation_id) {
-					$this->iron->deleteMessage($queue, $id, $reservation_id);
-				} else {
-					$this->iron->deleteMessage($queue, $id);
-				}
+        $this->iron->deleteMessage($queue, $id, $reservation_id);
     }
 
     /**
@@ -185,12 +195,12 @@ class IronQueue extends Queue implements QueueContract
      */
     protected function marshalPushedJob()
     {
-        $r = $this->request;
-
-        $body = $this->parseJobBody($r->getContent());
+        $body = $this->parseJobBody($this->getRequest()->getContent());
 
         return (object) [
-            'id' => $r->header('iron-message-id'), 'body' => $body, 'pushed' => true,
+            'id' => $this->getRequest()->header('iron-message-id'),
+            'body' => $body,
+            'pushed' => true,
         ];
     }
 
@@ -198,8 +208,7 @@ class IronQueue extends Queue implements QueueContract
      * Create a new IronJob for a pushed job.
      *
      * @param object $job
-     *
-     * @return \Illuminate\Queue\Jobs\IronJob
+     * @return \Collective\IronQueue\Jobs\IronJob
      */
     protected function createPushedIronJob($job)
     {
@@ -207,38 +216,35 @@ class IronQueue extends Queue implements QueueContract
     }
 
     /**
-     * Create a payload string from the given job and data.
+     * Create a payload array from the given job and data.
      *
-     * @param string $job
-     * @param mixed  $data
-     * @param string $queue
-     *
-     * @return string
+     * @param  string  $job
+     * @param  mixed   $data
+     * @param  string  $queue
+     * @return array
      */
-    protected function createPayload($job, $data = '', $queue = null)
+    protected function createPayloadArray($job, $data = '', $queue = null)
     {
-        $payload = $this->setMeta(parent::createPayload($job, $data), 'attempts', 1);
-
-        return $this->setMeta($payload, 'queue', $this->getQueue($queue));
+        return array_merge(parent::createPayloadArray($job, $data, $queue), [
+            'queue' => $this->getQueue($queue),
+        ]);
     }
 
     /**
      * Parse the job body for firing.
      *
      * @param string $body
-     *
      * @return string
      */
     protected function parseJobBody($body)
     {
-        return $this->shouldEncrypt ? $this->crypt->decrypt($body) : $body;
+        return $this->shouldEncrypt ? $this->getEncrypter()->decrypt($body) : $body;
     }
 
     /**
      * Get the queue or return the default.
      *
      * @param string|null $queue
-     *
      * @return string
      */
     public function getQueue($queue)
@@ -270,11 +276,36 @@ class IronQueue extends Queue implements QueueContract
      * Set the request instance.
      *
      * @param \Illuminate\Http\Request $request
-     *
      * @return void
      */
     public function setRequest(Request $request)
     {
         $this->request = $request;
+    }
+
+    /**
+     * Get the encrypter implementation.
+     *
+     * @return \Illuminate\Contracts\Encryption\Encrypter
+     * @throws \Exception
+     */
+    protected function getEncrypter()
+    {
+        if (is_null($this->encrypter)) {
+            throw new \Exception('No encrypter has been set on the Queue.');
+        }
+
+        return $this->encrypter;
+    }
+
+    /**
+     * Set the encrypter implementation.
+     *
+     * @param \Illuminate\Contracts\Encryption\Encrypter $encrypter
+     * @return void
+     */
+    public function setEncrypter(Encrypter $encrypter)
+    {
+        $this->encrypter = $encrypter;
     }
 }
